@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neumorphic Calculator (Fixed)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #e0e0e0;
+            --primary-shadow: #c7c7c7;
+            --secondary-shadow: #ffffff;
+            --text-color: #555;
+            --operator-color: #f58a4b;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--bg-color);
+            font-family: 'Poppins', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .calculator {
+            width: 340px;
+            padding: 25px;
+            border-radius: 40px;
+            background: var(--bg-color);
+            box-shadow: 12px 12px 24px var(--primary-shadow),
+                        -12px -12px 24px var(--secondary-shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .display-screen {
+            width: 100%;
+            border: none;
+            outline: none;
+            padding: 20px;
+            text-align: right;
+            font-size: 2.5rem;
+            color: var(--text-color);
+            background: var(--bg-color);
+            box-shadow: inset 7px 7px 14px var(--primary-shadow),
+                        inset -7px -7px 14px var(--secondary-shadow);
+            border-radius: 20px;
+            box-sizing: border-box;
+            overflow-x: auto;
+        }
+        
+        .display-screen::placeholder {
+            color: #888;
+        }
+
+        .buttons-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .btn {
+            width: 70px;
+            height: 70px;
+            border: none;
+            border-radius: 20px;
+            background: var(--bg-color);
+            box-shadow: 5px 5px 10px var(--primary-shadow),
+                        -5px -5px 10px var(--secondary-shadow);
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--text-color);
+            cursor: pointer;
+            transition: all 0.1s ease-in-out;
+        }
+
+        .btn:active, .btn.active {
+            box-shadow: inset 5px 5px 10px var(--primary-shadow),
+                        inset -5px -5px 10px var(--secondary-shadow);
+            font-size: 1.4rem;
+        }
+
+        .btn.operator {
+            color: var(--operator-color);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="calculator">
+        <input type="text" class="display-screen" id="display" placeholder="0" readonly>
+        
+        <div class="buttons-grid">
+            <button class="btn" data-value="AC">AC</button>
+            <button class="btn" data-value="(">(</button>
+            <button class="btn" data-value=")">)</button>
+            <button class="btn operator" data-value="/">÷</button>
+            
+            <button class="btn" data-value="7">7</button>
+            <button class="btn" data-value="8">8</button>
+            <button class="btn" data-value="9">9</button>
+            <button class="btn operator" data-value="*">×</button>
+
+            <button class="btn" data-value="4">4</button>
+            <button class="btn" data-value="5">5</button>
+            <button class="btn" data-value="6">6</button>
+            <button class="btn operator" data-value="-">−</button>
+
+            <button class="btn" data-value="1">1</button>
+            <button class="btn" data-value="2">2</button>
+            <button class="btn" data-value="3">3</button>
+            <button class="btn operator" data-value="+">+</button>
+
+            <button class="btn" data-value="0">0</button>
+            <button class="btn" data-value=".">.</button>
+            <button class="btn" data-value="%">%</button>
+            <button class="btn operator" data-value="=">=</button>
+        </div>
+    </div>
+
+    <script>
+        const display = document.getElementById('display');
+        const buttons = document.querySelectorAll('.btn');
+
+        let expression = '';
+
+        /**
+         * Safely evaluates a mathematical string expression.
+         */
+        const safeEvaluate = (expr) => {
+            try {
+                // To handle percentage correctly (e.g., 50+10% should be 55), we need more advanced logic.
+                // For this version, we will treat X% as (X/100).
+                const sanitizedExpr = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/%/g, '/100');
+                
+                // Prevent evaluation of empty or invalid trailing operators
+                if (!sanitizedExpr || /[\+\-\*\/]$/.test(sanitizedExpr)) {
+                    return 'Error';
+                }
+
+                const result = new Function('return ' + sanitizedExpr)();
+                if (isNaN(result) || !isFinite(result)) return 'Error';
+                
+                return parseFloat(result.toPrecision(12));
+            } catch (error) {
+                return 'Error';
+            }
+        };
+        
+        /**
+         * Updates the display with the current expression.
+         */
+        const updateDisplay = () => {
+            display.value = expression.replace(/\*/g, '×').replace(/\//g, '÷') || '0';
+        };
+
+        /**
+         * Handles all button clicks with improved validation logic.
+         */
+        const handleButton = (value) => {
+            if (value === 'AC') {
+                expression = '';
+            } else if (value === '=') {
+                if (expression) {
+                    expression = String(safeEvaluate(expression));
+                }
+            } else {
+                if (expression === 'Error') expression = '';
+
+                const lastChar = expression.slice(-1);
+                const operators = ['+', '-', '*', '/'];
+
+                // If input is an operator
+                if (operators.includes(value)) {
+                    // Replace last operator if it's also an operator
+                    if (operators.includes(lastChar)) {
+                        expression = expression.slice(0, -1) + value;
+                    } 
+                    // Don't add operator if expression is empty or after an open bracket
+                    else if (expression && lastChar !== '(') {
+                        expression += value;
+                    }
+                } 
+                // If input is a decimal point
+                else if (value === '.') {
+                    // Find the last number segment to check if it already has a decimal
+                    const segments = expression.split(/[\+\-\*\/ \(\)]/);
+                    if (!segments[segments.length - 1].includes('.')) {
+                        expression += value;
+                    }
+                } 
+                // All other inputs (numbers, brackets, %)
+                else {
+                    expression += value;
+                }
+            }
+            updateDisplay();
+        };
+
+        // Add event listeners to all buttons
+        buttons.forEach(button => {
+            button.addEventListener('click', () => handleButton(button.dataset.value.replace('×', '*').replace('÷', '/')));
+        });
+        
+        // Add keyboard support
+        window.addEventListener('keydown', (e) => {
+            e.preventDefault(); // Prevent default browser actions for keys like '/'
+            let key = e.key;
+            let valueToUse = null;
+
+            if (key >= '0' && key <= '9' || key === '.' || key === '+' || key === '-' || key === '*' || key === '/' || key === '(' || key === ')' || key === '%') {
+                valueToUse = key;
+            } else if (key === 'Enter' || key === '=') {
+                valueToUse = '=';
+            } else if (key === 'Backspace') {
+                expression = expression.slice(0, -1);
+            } else if (key === 'Escape' || key.toLowerCase() === 'c') {
+                valueToUse = 'AC';
+            }
+
+            if (valueToUse) {
+                handleButton(valueToUse);
+            }
+            updateDisplay(); // Update display on backspace as well
+            
+            // Visual feedback for key press
+            const button = document.querySelector(`button[data-value="${key.replace('*', '×').replace('/', '÷')}"]`) || 
+                           (key === 'Enter' && document.querySelector(`button[data-value="="]`));
+            if(button) {
+                button.classList.add('active');
+                setTimeout(() => button.classList.remove('active'), 100);
+            }
+        });
+        
+        updateDisplay(); // Initial call
+    </script>
+</body>
+</html>
